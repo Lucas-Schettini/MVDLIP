@@ -28,6 +28,12 @@ struct Coord {
     double y;
 };
 
+struct GroundArc {
+    int i;
+    int j;
+    double dij;
+};
+
 class Data {
 public:
     Data();
@@ -45,6 +51,15 @@ public:
     vector<Line> lines;
 
     map<int, Coord> coordinates;
+
+    bool hasDepot;
+    int depotId;
+    Coord depotCoord;
+
+    vector<GroundArc> groundArcs;
+
+    void setDepot(int id, double x, double y);
+    void buildGroundArcs();
 
     void print() const;
 

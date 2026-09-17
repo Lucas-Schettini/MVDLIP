@@ -8,6 +8,9 @@ Data::Data(){
     tot_vert = 0;
     num_depots = 0;
     num_lines = 0;
+    hasDepot = false;
+    depotId = 0;
+    depotCoord = {0.0, 0.0};
 }
 
 string Data::trim(const string& s){
@@ -139,6 +142,46 @@ double Data::euclidean(const Coord& a, const Coord& b){
     return sqrt(dx * dx + dy * dy);
 }
 
+void Data::setDepot(int id, double x, double y){
+    depotId = id;
+    depotCoord.x = x;
+    depotCoord.y = y;
+    hasDepot = true;
+
+    coordinates[depotId] = depotCoord;
+}
+
+void Data::buildGroundArcs(){
+    groundArcs.clear();
+
+    set<int> pSet(depots.begin(), depots.end());
+    if(hasDepot){
+        pSet.insert(depotId);
+    }
+    else{
+        cerr << "Nenhum deposito foi definido (chame setDepot() antes). "
+             << "Ap sera gerado apenas sobre os pontos de paragem D, "
+             << "sem o deposito ficticio 0." << endl;
+    }
+
+    for(int i : pSet){
+        for(int j : pSet){
+            if(i == j) continue;
+
+            auto itI = coordinates.find(i);
+            auto itJ = coordinates.find(j);
+            if(itI == coordinates.end() || itJ == coordinates.end()){
+                cerr << "Aviso: vertice " << (itI == coordinates.end() ? i : j)
+                     << " nao tem coordenadas conhecidas; arco ("
+                     << i << "," << j << ") ignorado." << endl;
+                continue;
+            }
+
+            groundArcs.push_back({i, j, euclidean(itI->second, itJ->second)});
+        }
+    }
+}
+
 void Data::exportJSON(const string& fileName) const {
     ofstream out(fileName);
     if(!out.is_open()){
@@ -172,24 +215,12 @@ void Data::exportJSON(const string& fileName) const {
         }
     }
 
-    set<int> dSet(depots.begin(), depots.end());
-    dSet.insert(0);
-
-    struct Arc { 
-        int i; 
-        int j; 
-        double dij; 
-    };
-    vector<Arc> arcs;
-    for(int i : dSet){
-        for(int j : dSet){
-            if(i == j) continue;
-            auto itI = coordinates.find(i);
-            auto itJ = coordinates.find(j);
-            if(itI == coordinates.end() || itJ == coordinates.end()) continue;
-            arcs.push_back({i, j, euclidean(itI->second, itJ->second)});
-        }
+    if(groundArcs.empty()){
+        const_cast<Data*>(this)->buildGroundArcs();
     }
+
+    set<int> pSet(depots.begin(), depots.end());
+    if(hasDepot) pSet.insert(depotId);
 
     out << "{\n";
 
@@ -217,6 +248,20 @@ void Data::exportJSON(const string& fileName) const {
         out << (i ? ", " : "") << depots[i];
     }
     out << "],\n";
+
+    out << "    \"P\": [";
+    {
+        bool first = true;
+        for(int p : pSet){
+            if(!first) out << ", ";
+            out << p;
+            first = false;
+        }
+    }
+    out << "],\n";
+    if(!hasDepot){
+        out << "    \"_P_aviso\": \"deposito ficticio 0 nao definido (chame Data::setDepot antes de exportJSON); P = D\",\n";
+    }
 
     out << "    \"VR\": [";
     {
@@ -246,13 +291,13 @@ void Data::exportJSON(const string& fileName) const {
     }
     out << "  ],\n";
 
-    out << "  \"arcs\": [\n";
-    for(size_t i = 0; i < arcs.size(); ++i){
-        const Arc& a = arcs[i];
+    out << "  \"Ap\": [\n";
+    for(size_t i = 0; i < groundArcs.size(); ++i){
+        const GroundArc& a = groundArcs[i];
         out << "    {\"i\": " << a.i
             << ", \"j\": " << a.j
             << ", \"dij\": " << a.dij << "}";
-        out << (i + 1 < arcs.size() ? ",\n" : "\n");
+        out << (i + 1 < groundArcs.size() ? ",\n" : "\n");
     }
     out << "  ],\n";
 

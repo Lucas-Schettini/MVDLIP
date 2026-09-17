@@ -5,11 +5,12 @@ data = JSON3.read("teste.json")
 
 D = data.sets.D
 V = data.sets.V
+Vr = data.sets.VR
 K = data.sets.K
 Er = [(e.u, e.v) for e in data.required_edges]
 de = Dict((e.u, e.v) => e.de for e in data.required_edges) #fazer d(uv) = d(vu)?
-Ap = [(arc.i, arc.j) for arc in data.arcs]
-d = Dict((arc.i, arc.j) => arc.dij for arc in data.arcs) #fazer dij = dji?
+Ap = [(garc.i, garc.j) for garc in data.Ap]
+d = Dict((garc.i, garc.j) => garc.dij for garc in data.Ap) #fazer dij = dji?
 T = [1,2,3]
 
 model = Model(HiGHS.Optimizer)
@@ -19,7 +20,7 @@ model = Model(HiGHS.Optimizer)
 @variable(model, w[(i,j) in Ap, t in T], Bin)
 @variable(model, z[d in D, t in T], Bin)
 @variable(model, g[(i,j) in Ap, t in T] >= 0, Int)
-@variable(model, x[e in E, t in T, d in D, k in K], Bin) #TODO
+@variable(model, x[e in E, t in T, d in D, k in K], Bin)
 @variable(model, y[e in Enr, t in T, d in D, k in K], Bin)
 @variable(model, m >= 0)
 
