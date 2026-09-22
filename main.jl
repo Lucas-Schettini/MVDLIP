@@ -1,11 +1,18 @@
 using JuMP, HiGHS
 using JSON3
+using Combinatorics
 
 data = JSON3.read("teste.json")
 
 D = data.sets.D
 V = data.sets.V
 Vr = data.sets.VR
+
+VrD = Vr + D #vértices requeridos + os pontos de parada
+
+Enr_it = combinations(VrD) #usar produto cartesiano?
+Enr = collect(Enr_it)
+
 K = data.sets.K
 Er = [(e.u, e.v) for e in data.required_edges]
 de = Dict((e.u, e.v) => e.de for e in data.required_edges) #fazer d(uv) = d(vu)?
@@ -13,15 +20,18 @@ Ap = [(garc.i, garc.j) for garc in data.Ap]
 d = Dict((garc.i, garc.j) => garc.dij for garc in data.Ap) #fazer dij = dji?
 T = [1,2,3]
 
-model = Model(HiGHS.Optimizer)
-
-#DEFINIR ENR 
+model = Model(HiGHS.Optimizer)R 
 
 @variable(model, w[(i,j) in Ap, t in T], Bin)
 @variable(model, z[d in D, t in T], Bin)
 @variable(model, g[(i,j) in Ap, t in T] >= 0, Int)
 @variable(model, x[e in E, t in T, d in D, k in K], Bin)
 @variable(model, y[e in Enr, t in T, d in D, k in K], Bin)
+@variable(model, a[(i,j) in E, t in T, d in D, k in K], Bin)
+@variable(model, b[(i,j) in E, t in T, d in D, k in K], Bin)
+@variable(model, p[v in V, t in T, d in D, k in K], Bin)
+@variable(model, u[v in V, t in T, d in D, k in K], Bin)
+@variable(model, f[(i,j) in E, t in T, d in D, k in K], Int)
 @variable(model, m >= 0)
 
 @objective(model, Min, m)
