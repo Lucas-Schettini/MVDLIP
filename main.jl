@@ -8,19 +8,27 @@ D = data.sets.D
 V = data.sets.V
 Vr = data.sets.VR
 
-VrD = Vr + D #vértices requeridos + os pontos de parada
+VrD = union(Vr, D) #vértices requeridos + os pontos de parada
 
-Enr_it = combinations(VrD) #usar produto cartesiano?
+Enr_it = combinations(VrD, 2) #usar produto cartesiano?
 Enr = collect(Enr_it)
 
-K = data.sets.K
-Er = [(e.u, e.v) for e in data.required_edges]
-de = Dict((e.u, e.v) => e.de for e in data.required_edges) #fazer d(uv) = d(vu)?
-Ap = [(garc.i, garc.j) for garc in data.Ap]
-d = Dict((garc.i, garc.j) => garc.dij for garc in data.Ap) #fazer dij = dji?
-T = [1,2,3]
+coords = Dict(parse(Int, string(k)) => (v.x, v.y) for (k, v) in pairs(data.coordinates))
+euclid(u, v) = sqrt((coords[u][1] - coords[v][1])^2 + (coords[u][2] - coords[v][2])^2)
+dnr = Dict(e => euclid(e[1], e[2]) for e in Enr)
 
-model = Model(HiGHS.Optimizer)R 
+Er = [(e.u, e.v) for e in data.required_edges]
+dr = Dict((e.u, e.v) => e.de for e in data.required_edges) #fazer d(uv) = d(vu)?
+
+E = union(Er, Enr)
+
+Ap = [(garc.i, garc.j) for garc in data.Ap]
+dc = Dict((garc.i, garc.j) => garc.dij for garc in data.Ap) #fazer dij = dji?
+
+T = [1,2,3]
+K = [1,2,3]
+
+model = Model(HiGHS.Optimizer)
 
 @variable(model, w[(i,j) in Ap, t in T], Bin)
 @variable(model, z[d in D, t in T], Bin)
@@ -41,19 +49,19 @@ vs = 4
 vc = 14
 vd = 6 # Maior do que a velocidade de serviço
 
-# ts = [de[e]/vs for e in Er]
-# tvoo = [de[e]/vd for e in Enr]
-# t_terra = [dij[i][j]/vc ]
+ts = Dict(e => dr[e]/vs for e in Er)
+tvoo = Dict(e => dnr[e]/vd for e in Enr)
+t_terra = Dict((i,j) => dc[(i,j)]/vc for (i,j) in Ap)
 
-# @constraint(model, con2[t in T],
-#     sum(t_terra[i,j] * w[i,j,t] for (i,j) in Ap) +
-#     sum(kappa[d] * z[d,t] for d in D) +
-#     sum(
-#         sum(t_s[e] * x[e,t,d,k] for e in Er) +
-#         sum(t_voo[e] * (x[e,t,d,k] + y[e,t,d,k]) for e in Enr)
-#         for d in D, k in K
-#     ) <= m
-# ) # modelo, nome, expressão 
+@constraint(model, con2[t in T],
+    sum(t_terra[(i,j)] * w[i,j,t] for (i,j) in Ap) +
+    sum(kappa[d] * z[d,t] for d in D) +
+    sum(
+        sum(t_s[e] * x[e,t,d,k] for e in Er) +
+        sum(t_voo[e] * (x[e,t,d,k] + y[e,t,d,k]) for e in Enr)
+        for d in D, k in K
+    ) <= m
+) # modelo, nome, expressão 
 
 # #Roteamento terrestre
 # @constraint(model, con3[t in T], 
@@ -88,7 +96,7 @@ vd = 6 # Maior do que a velocidade de serviço
 # # Retrições para resolver o subtour
 
 # @constraint(model, con12[e in Er], 
-#     sum(x[e,t,d,k] for e in Er for t in T for d in D for k in K >= 1))
+#     sum(x[e,t,d,k] for e in Er for t in T for d in D for k in K) >= 1)
 
 # @constraint(model, con13[e in Enr, d in D, k in K, t in T], 
 #     x[e,t,d,k] >= y[e,t,d,k])
