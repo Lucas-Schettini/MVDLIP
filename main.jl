@@ -2,7 +2,7 @@ using JuMP, HiGHS
 using JSON3
 using Combinatorics
 
-data = JSON3.read("teste.json")
+data = JSON3.read("teste_sem_splitting.json")
 
 D = Int.(data.sets.D)
 V = Int.(data.sets.V)
@@ -31,13 +31,16 @@ kappa = [10 for d in D] #seria um dict?
 
 model = Model(HiGHS.Optimizer)
 
+AE = vcat(E, [(j,i) for (i,j) in E]) # E no sentido (i,j) e (j,i)
+AEnr = vcat(Enr, [(j,i) for (i,j) in Enr]) # Enr nos dois sentidos
+
 @variable(model, w[(i,j) in Ap, t in T], Bin)
 @variable(model, z[d in D, t in T], Bin)
 @variable(model, g[(i,j) in Ap, t in T] >= 0, Int)
 @variable(model, x[e in E, t in T, d in D, k in K], Bin)
 @variable(model, y[e in Enr, t in T, d in D, k in K], Bin)
-@variable(model, a[(i,j) in E, t in T, d in D, k in K], Bin)
-@variable(model, b[(i,j) in E, t in T, d in D, k in K], Bin)
+@variable(model, a[(i,j) in AE, t in T, d in D, k in K], Bin)
+@variable(model, b[(i,j) in AEnr, t in T, d in D, k in K], Bin)
 @variable(model, p[v in V, t in T, d in D, k in K], Bin)
 @variable(model, u[v in V, t in T, d in D, k in K], Bin)
 @variable(model, f[(i,j) in E, t in T, d in D, k in K], Int)
@@ -85,32 +88,36 @@ D0 = union([0], D)
     sum(z[d,t] for d in D))
 
 @constraint(model, con8[d in D, t in T],
-    sum(g[(j,d),t] for j in D0) - 
-    sum(g[(d,j),t] for j in D0) == z[d,t])
+    sum(g[(j,d),t] for j in D0 if j != d) - 
+    sum(g[(d,j),t] for j in D0 if j != d) == z[d,t])
 
 @constraint(model, con9[(i,j) in Ap, t in T],
-    g[(i,j),t] <= length(D)*w[i,j,t])
+    g[(i,j),t] <= length(D)*w[(i,j),t])
 
 # #Roteamento aéreo
 
-# # @constraint(model, con10)
-# # @constraint(model, con11)
+@constraint(model, con11[(i,j) in E, t in T, d in D, k in K], 
+    a[(i,j),t,d,k] + a[(j,i),t,d,k] == x[(i,j),t,d,k])
+@constraint(model, con12[(i,j) in Enr, t in T, d in D, k in K], 
+    b[(i,j),t,d,k] + b[(j,i),t,d,k] == y[(i,j),t,d,k])
 # # Retrições para resolver o subtour
 
-# @constraint(model, con12[e in Er], 
-#     sum(x[e,t,d,k] for e in Er for t in T for d in D for k in K) >= 1)
+@constraint(model, con12[e in Er], 
+    sum(x[e,t,d,k] for e in Er for t in T for d in D for k in K) >= 1)
 
-# @constraint(model, con13[e in Enr, d in D, k in K, t in T], 
-#     x[e,t,d,k] >= y[e,t,d,k])
+@constraint(model, con13[e in Enr, d in D, k in K, t in T], 
+    x[e,t,d,k] >= y[e,t,d,k])
 
-# @constraint(model, con14[d in D, k in K, t in T],
-#     sum(ts[e]*x[e,t,d,k] for e in Er) + 
-#     sum(tvoo[e]*(x[e,t,d,k] + y[e,t,d,k]) for e in Enr) <= 
-#     L*z[d])
+L = 99999999
 
-# @constraint(model, con15[e in E, d in D, k in K, t in T],
-#     x[e,t,d,k] <= z[d])
+@constraint(model, con14[d in D, k in K, t in T],
+    sum(ts[e]*x[e,t,d,k] for e in Er) + 
+    sum(tvoo[e]*(x[e,t,d,k] + y[e,t,d,k]) for e in Enr) <= 
+    L*z[d,t])
+
+@constraint(model, con15[e in E, d in D, k in K, t in T],
+    x[e,t,d,k] <= z[d,t])
 
 # @constraint(model, con16[t in T, d in D, k in K])
 
-write_to_file(model, "modelo.lp")
+# write_to_file(model, "modelo.lp")

@@ -1,0 +1,246 @@
+{
+  "instance": {
+    "name": "MTLARP4_4_3_1_sem_splitting.dat",
+    "vertices_originais": 13,
+    "vertices_totais": 14
+  },
+  "sets": {
+    "V": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    "D": [
+      11,
+      12,
+      13
+    ],
+    "P": [
+      0,
+      11,
+      12,
+      13
+    ],
+    "VR": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "T": null,
+    "_T_preencher": "numero de caminhoes disponiveis (|T|)",
+    "K": null,
+    "_K_preencher": "numero maximo de voos por parada (|K|)"
+  },
+  "required_edges": [
+    {
+      "line": 0,
+      "u": 1,
+      "v": 5,
+      "de": 218.1896
+    },
+    {
+      "line": 1,
+      "u": 2,
+      "v": 3,
+      "de": 145.3028
+    },
+    {
+      "line": 2,
+      "u": 2,
+      "v": 6,
+      "de": 175.0536
+    },
+    {
+      "line": 3,
+      "u": 3,
+      "v": 6,
+      "de": 149.6344
+    },
+    {
+      "line": 4,
+      "u": 4,
+      "v": 7,
+      "de": 90.9071
+    },
+    {
+      "line": 5,
+      "u": 5,
+      "v": 6,
+      "de": 160.1024
+    },
+    {
+      "line": 6,
+      "u": 5,
+      "v": 7,
+      "de": 156.9279
+    },
+    {
+      "line": 7,
+      "u": 7,
+      "v": 10,
+      "de": 253.126
+    },
+    {
+      "line": 8,
+      "u": 8,
+      "v": 9,
+      "de": 123.3271
+    }
+  ],
+  "Ap": [
+    {
+      "i": 0,
+      "j": 11,
+      "dij": 113.9117959
+    },
+    {
+      "i": 0,
+      "j": 12,
+      "dij": 152.3437705
+    },
+    {
+      "i": 0,
+      "j": 13,
+      "dij": 208.4738708
+    },
+    {
+      "i": 11,
+      "j": 0,
+      "dij": 113.9117959
+    },
+    {
+      "i": 11,
+      "j": 12,
+      "dij": 241.7131709
+    },
+    {
+      "i": 11,
+      "j": 13,
+      "dij": 305.7875775
+    },
+    {
+      "i": 12,
+      "j": 0,
+      "dij": 152.3437705
+    },
+    {
+      "i": 12,
+      "j": 11,
+      "dij": 241.7131709
+    },
+    {
+      "i": 12,
+      "j": 13,
+      "dij": 255.7121953
+    },
+    {
+      "i": 13,
+      "j": 0,
+      "dij": 208.4738708
+    },
+    {
+      "i": 13,
+      "j": 11,
+      "dij": 305.7875775
+    },
+    {
+      "i": 13,
+      "j": 12,
+      "dij": 255.7121953
+    }
+  ],
+  "parameters": {
+    "vd": null,
+    "_vd_preencher": "velocidade de voo do drone em deadheading",
+    "vs": null,
+    "_vs_preencher": "velocidade de voo do drone durante o servico",
+    "vc": null,
+    "_vc_preencher": "velocidade media do caminhao",
+    "L": null,
+    "_L_preencher": "autonomia maxima de um voo de drone (tempo)",
+    "beta": null,
+    "_beta_preencher": "alcance maximo do drone",
+    "kappa_d": {
+      "11": null,
+      "12": null,
+      "13": null
+    },
+    "_kappa_d_preencher": "tempo de set-up/set-down em cada ponto d in D"
+  },
+  "coordinates": {
+    "0": {
+      "x": 150,
+      "y": 150
+    },
+    "1": {
+      "x": 165.696,
+      "y": 349.205
+    },
+    "2": {
+      "x": 271.291,
+      "y": 363.138
+    },
+    "3": {
+      "x": 342.133,
+      "y": 308.302
+    },
+    "4": {
+      "x": 36.7237,
+      "y": 214.811
+    },
+    "5": {
+      "x": 164.735,
+      "y": 213.01
+    },
+    "6": {
+      "x": 258.954,
+      "y": 257.394
+    },
+    "7": {
+      "x": 74.1537,
+      "y": 168.317
+    },
+    "8": {
+      "x": 247.183,
+      "y": 125.809
+    },
+    "9": {
+      "x": 323.013,
+      "y": 119.148
+    },
+    "10": {
+      "x": 63.1881,
+      "y": 0
+    },
+    "11": {
+      "x": 237.153,
+      "y": 76.6498
+    },
+    "12": {
+      "x": 0,
+      "y": 123.38
+    },
+    "13": {
+      "x": 109.439,
+      "y": 354.49
+    }
+  }
+}

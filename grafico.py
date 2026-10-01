@@ -39,16 +39,16 @@ def plot_instance(data, out_path=None):
         ax.plot([x1, x2], [y1, y2],
                 color=line_color[e["line"]], linewidth=2.2, zorder=2)
  
-    # VrD = data["sets"]["VR"] + data["sets"]["D"]
-    # Enr = [(i, j, dist(coords, i, j)) for i, j in itertools.combinations(VrD, 2)]
+    VrD = data["sets"]["VR"] + data["sets"]["D"]
+    Enr = [(i, j, dist(coords, i, j)) for i, j in itertools.combinations(VrD, 2)]
 
-    # for er in Enr:
-    #     u, v, d = er            
-    #     if u not in coords or v not in coords:
-    #         continue
-    #     (x1, y1), (x2, y2) = coords[u], coords[v]
-    #     ax.plot([x1, x2], [y1, y2],
-    #             color="black", linewidth=0.5, alpha=0.15, zorder=0.5)
+    for er in Enr:
+        u, v, d = er            
+        if u not in coords or v not in coords:
+            continue
+        (x1, y1), (x2, y2) = coords[u], coords[v]
+        ax.plot([x1, x2], [y1, y2],
+                color="black", linewidth=0.5, alpha=0.15, zorder=0.5)
 
     for a in data["Ap"]:
         i, j = a["i"], a["j"]
