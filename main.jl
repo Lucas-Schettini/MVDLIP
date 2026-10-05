@@ -1,4 +1,4 @@
-using JuMP, HiGHS
+using JuMP, CPLEX
 using JSON3
 using Combinatorics
 
@@ -10,8 +10,9 @@ Vr = Int.(data.sets.VR)
 
 VrD = union(Vr, D) #vértices requeridos + os pontos de parada
 
-Enr_it = combinations(VrD, 2) #usar produto cartesiano?
-Enr = collect(Enr_it)
+all_pairs = Set(Tuple(p) for p in combinations(VrD, 2))
+Er_set = Set(Tuple(sort([e.u, e.v])) for e in data.required_edges)
+Enr = collect(setdiff(all_pairs, Er_set))
 
 coords = Dict(parse(Int, string(k)) => (v.x, v.y) for (k, v) in pairs(data.coordinates))
 euclid(u, v) = sqrt((coords[u][1] - coords[v][1])^2 + (coords[u][2] - coords[v][2])^2)
@@ -29,7 +30,7 @@ T = [1,2,3]
 K = [1,2,3]
 kappa = [10 for d in D] #seria um dict?
 
-model = Model(HiGHS.Optimizer)
+model = Model(CPLEX.Optimizer)
 
 AE = vcat(E, [(j,i) for (i,j) in E]) # E no sentido (i,j) e (j,i)
 AEnr = vcat(Enr, [(j,i) for (i,j) in Enr]) # Enr nos dois sentidos
@@ -41,9 +42,9 @@ AEnr = vcat(Enr, [(j,i) for (i,j) in Enr]) # Enr nos dois sentidos
 @variable(model, y[e in Enr, t in T, d in D, k in K], Bin)
 @variable(model, a[(i,j) in AE, t in T, d in D, k in K], Bin)
 @variable(model, b[(i,j) in AEnr, t in T, d in D, k in K], Bin)
-@variable(model, p[v in V, t in T, d in D, k in K], Bin)
-@variable(model, u[v in V, t in T, d in D, k in K], Bin)
-@variable(model, f[(i,j) in E, t in T, d in D, k in K], Int)
+@variable(model, p[v in V, t in T, d in D, k in K], Int)
+#@variable(model, u[v in V, t in T, d in D, k in K], Bin) VERIFICAR SE É DE FATO NECESSÁRIO
+@variable(model, f[(i,j) in AE, t in T, d in D, k in K] >= 0)
 @variable(model, m >= 0)
 
 @objective(model, Min, m)
@@ -96,28 +97,67 @@ D0 = union([0], D)
 
 # #Roteamento aéreo
 
-@constraint(model, con11[(i,j) in E, t in T, d in D, k in K], 
+@constraint(model, con10[(i,j) in E, t in T, d in D, k in K], 
     a[(i,j),t,d,k] + a[(j,i),t,d,k] == x[(i,j),t,d,k])
-@constraint(model, con12[(i,j) in Enr, t in T, d in D, k in K], 
+@constraint(model, con11[(i,j) in Enr, t in T, d in D, k in K], 
     b[(i,j),t,d,k] + b[(j,i),t,d,k] == y[(i,j),t,d,k])
-# # Retrições para resolver o subtour
 
-@constraint(model, con12[e in Er], 
+arcs_in  = Dict(v => [(i,j) for (i,j) in AE if j == v] for v in V)
+arcs_out = Dict(v => [(i,j) for (i,j) in AE if i == v] for v in V)
+
+Enr_in = Dict(v => [(i,j) for (i,j) in AEnr if j == v] for v in V)
+Enr_out = Dict(v => [(i,j) for (i,j) in AEnr if i == v] for v in V)
+
+@constraint(model, con12[v in V, t in T, d in D, k in K],
+    sum(a[arc,t,d,k] for arc in arcs_in[v]) +
+    sum(b[arc,t,d,k] for arc in Enr_in[v]) -
+    (sum(a[arc,t,d,k] for arc in arcs_out[v]) +
+    sum(b[arc,t,d,k] for arc in Enr_out[v])) ==
+    2p[v,t,d,k]
+)
+
+@constraint(model, con13[v in V, t in T, d in D, k in K, e in E; v != d && v in e], #V\{d}
+    sum(f[arc,t,d,k] for arc in arcs_in[v]) -
+    sum(f[arc,t,d,k] for arc in arcs_out[v]) >=
+    x[e,t,d,k])
+
+sing_direc_idx = Dict((i,j) => (i,j) in E ? (i,j) : (j,i) for (i,j) in AE)
+AEr = [arc for arc in AE if sing_direc_idx[arc] in Er] # Er nos dois sentidos
+
+@constraint(model, con14_x[(i,j) in AEr, t in T, d in D, k in K],
+    f[(i,j),t,d,k] <=
+    (length(V) - 1)*(x[sing_direc_idx[(i,j)],t,d,k]))
+
+@constraint(model, con14_y[(i,j) in AEnr, t in T, d in D, k in K],
+    f[(i,j),t,d,k] <=
+    (length(V) - 1)*(x[sing_direc_idx[(i,j)],t,d,k] + y[sing_direc_idx[(i,j)],t,d,k]))
+
+@constraint(model, con15[e in Er], 
     sum(x[e,t,d,k] for e in Er for t in T for d in D for k in K) >= 1)
 
-@constraint(model, con13[e in Enr, d in D, k in K, t in T], 
+@constraint(model, con16[e in Enr, d in D, k in K, t in T], 
     x[e,t,d,k] >= y[e,t,d,k])
 
-L = 99999999
+L = 85
 
-@constraint(model, con14[d in D, k in K, t in T],
+@constraint(model, con17[d in D, k in K, t in T],
     sum(ts[e]*x[e,t,d,k] for e in Er) + 
     sum(tvoo[e]*(x[e,t,d,k] + y[e,t,d,k]) for e in Enr) <= 
     L*z[d,t])
 
-@constraint(model, con15[e in E, d in D, k in K, t in T],
+@constraint(model, con18[e in E, d in D, k in K, t in T],
     x[e,t,d,k] <= z[d,t])
 
-# @constraint(model, con16[t in T, d in D, k in K])
+#write_to_file(model, "modelo.lp")
 
-# write_to_file(model, "modelo.lp")
+optimize!(model)
+
+println(termination_status(model))
+println(primal_status(model))
+
+for v in all_variables(model)
+    val = value(v)
+    if abs(val) > 1e-6
+        println(v, " = ", val)
+    end
+end
