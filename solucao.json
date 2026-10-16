@@ -1,0 +1,1 @@
+{"truck_arcs":[{"t":1,"j":11,"i":0},{"t":1,"j":0,"i":11}],"flight_arcs":[{"d":11,"t":1,"pass":1,"kind":"service","k":1,"j":2,"i":1},{"d":11,"t":1,"pass":1,"kind":"service","k":1,"j":3,"i":2},{"d":11,"t":1,"pass":1,"kind":"service","k":1,"j":1,"i":3},{"d":11,"t":1,"pass":1,"kind":"deadhead","k":1,"j":1,"i":11},{"d":11,"t":1,"pass":2,"kind":"deadhead","k":1,"j":11,"i":1}],"m":7.0}

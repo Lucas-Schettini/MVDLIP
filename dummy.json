@@ -1,0 +1,102 @@
+{
+  "instance": {
+    "name": "dummy.json",
+    "vertices_originais": 4,
+    "vertices_totais": 5
+  },
+  "sets": {
+    "V": [
+      0,
+      1,
+      2,
+      3,
+      11
+    ],
+    "D": [
+      11
+    ],
+    "P": [
+      0,
+      11
+    ],
+    "VR": [
+      1,
+      2,
+      3
+    ],
+    "T": null,
+    "_T_preencher": "numero de caminhoes disponiveis (|T|)",
+    "K": null,
+    "_K_preencher": "numero maximo de voos por parada (|K|)"
+  },
+  "required_edges": [
+    {
+      "line": 0,
+      "u": 1,
+      "v": 2,
+      "de": 4
+    },
+    {
+      "line": 1,
+      "u": 1,
+      "v": 3,
+      "de": 3
+    },
+    {
+      "line": 2,
+      "u": 2,
+      "v": 3,
+      "de": 5
+    }
+  ],
+  "Ap": [
+    {
+      "i": 0,
+      "j": 11,
+      "dij": 14
+    },
+    {
+      "i": 11,
+      "j": 0,
+      "dij": 14
+    }
+  ],
+  "parameters": {
+    "vd": null,
+    "_vd_preencher": "velocidade de voo do drone em deadheading",
+    "vs": null,
+    "_vs_preencher": "velocidade de voo do drone durante o servico",
+    "vc": null,
+    "_vc_preencher": "velocidade media do caminhao",
+    "L": null,
+    "_L_preencher": "autonomia maxima de um voo de drone (tempo)",
+    "beta": null,
+    "_beta_preencher": "alcance maximo do drone",
+    "kappa_d": {
+      "11": null
+    },
+    "_kappa_d_preencher": "tempo de set-up/set-down em cada ponto d in D"
+  },
+  "coordinates": {
+    "0": {
+      "x": 0,
+      "y": 0
+    },
+    "1": {
+      "x": 14,
+      "y": 6
+    },
+    "2": {
+      "x": 14,
+      "y": 10
+    },
+    "3": {
+      "x": 17,
+      "y": 6
+    },
+    "11": {
+      "x": 14,
+      "y": 0
+    }
+  }
+}

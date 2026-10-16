@@ -2,7 +2,7 @@ using JuMP, CPLEX
 using JSON3
 using Combinatorics
 
-data = JSON3.read("teste_sem_splitting.json")
+data = JSON3.read("dummy.json")
 
 D = Int.(data.sets.D)
 V = Int.(data.sets.V)
@@ -26,8 +26,8 @@ E = union(Er, Enr)
 Ap = [(garc.i, garc.j) for garc in data.Ap]
 dc = Dict((garc.i, garc.j) => garc.dij for garc in data.Ap) #fazer dij = dji?
 
-T = [1,2,3]
-K = [1,2,3]
+T = [1]
+K = [1,2]
 kappa = [10 for d in D] #seria um dict?
 
 model = Model(CPLEX.Optimizer)
@@ -113,7 +113,8 @@ Enr_out = Dict(v => [(i,j) for (i,j) in AEnr if i == v] for v in V)
     sum(b[arc,t,d,k] for arc in Enr_in[v]) -
     (sum(a[arc,t,d,k] for arc in arcs_out[v]) +
     sum(b[arc,t,d,k] for arc in Enr_out[v])) ==
-    2p[v,t,d,k]
+    #2p[v,t,d,k]
+    0
 )
 
 @constraint(model, con13[v in V, t in T, d in D, k in K, e in E; v != d && v in e], #V\{d}
@@ -133,12 +134,12 @@ AEr = [arc for arc in AE if sing_direc_idx[arc] in Er] # Er nos dois sentidos
     (length(V) - 1)*(x[sing_direc_idx[(i,j)],t,d,k] + y[sing_direc_idx[(i,j)],t,d,k]))
 
 @constraint(model, con15[e in Er], 
-    sum(x[e,t,d,k] for e in Er for t in T for d in D for k in K) >= 1)
+    sum(x[e,t,d,k] for t in T for d in D for k in K) >= 1)
 
 @constraint(model, con16[e in Enr, d in D, k in K, t in T], 
     x[e,t,d,k] >= y[e,t,d,k])
 
-L = 85
+L = 5
 
 @constraint(model, con17[d in D, k in K, t in T],
     sum(ts[e]*x[e,t,d,k] for e in Er) + 
@@ -160,4 +161,34 @@ for v in all_variables(model)
     if abs(val) > 1e-6
         println(v, " = ", val)
     end
+end
+
+thr = 0.5 
+
+truck_arcs = [
+    Dict("t" => t, "i" => i, "j" => j)
+    for (i,j) in Ap, t in T if value(w[(i,j),t]) > thr
+]
+
+flight_arcs = []
+for t in T, d in D, k in K
+    for (i,j) in AE
+        if value(a[(i,j),t,d,k]) > thr
+            push!(flight_arcs, Dict("t"=>t,"d"=>d,"k"=>k,"i"=>i,"j"=>j,
+                "kind" => (sing_direc_idx[(i,j)] in Er ? "service" : "deadhead"),
+                "pass" => 1))
+        end
+    end
+    for (i,j) in AEnr
+        if value(b[(i,j),t,d,k]) > thr
+            push!(flight_arcs, Dict("t"=>t,"d"=>d,"k"=>k,"i"=>i,"j"=>j,
+                "kind" => "deadhead", "pass" => 2))
+        end
+    end
+end
+
+open("solucao.json", "w") do io
+    JSON3.write(io, Dict("m" => value(m),
+                         "truck_arcs" => truck_arcs,
+                         "flight_arcs" => flight_arcs))
 end
