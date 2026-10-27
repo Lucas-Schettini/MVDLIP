@@ -2,7 +2,7 @@ using JuMP, CPLEX
 using JSON3
 using Combinatorics
 
-data = JSON3.read("teste_sem_splitting.json")
+data = JSON3.read("dummy_K2.json")
 
 D = Int.(data.sets.D)
 V = Int.(data.sets.V)
@@ -26,7 +26,7 @@ E = union(Er, Enr)
 Ap = [(garc.i, garc.j) for garc in data.Ap]
 dc = Dict((garc.i, garc.j) => garc.dij for garc in data.Ap) #fazer dij = dji?
 
-T = [1]
+T = [1,2]
 K = [1,2]
 kappa = [10 for d in D]
 
@@ -137,7 +137,7 @@ delta_minus_nr = Dict(v => [(i,j) for (i,j) in AEnr if j == v] for v in VrD)
 @constraint(model, con16[(i,j) in AEnr, d in D, k in K, t in T], 
     x[(i,j),t,d,k] + x[(j,i),t,d,k] >= y[(i,j),t,d,k] + y[(j,i),t,d,k])
 
-L = 999999999
+L = 4
 
 @constraint(model, con17[d in D, k in K, t in T],
     sum(ts[e]*x[e,t,d,k] for e in AEr) + 
@@ -146,6 +146,10 @@ L = 999999999
 
 @constraint(model, con18[e in AE, d in D, k in K, t in T],
     x[e,t,d,k] <= z[d,t])
+
+@constraint(model, con19[t in T, d in D, k in K; k < K[end]],
+    sum(x[a,t,d,k]   for a in AE) >=
+    sum(x[a,t,d,k+1] for a in AE))
 
 #write_to_file(model, "modelo.lp")
 
@@ -171,14 +175,14 @@ truck_arcs = [
 flight_arcs = []
 for t in T, d in D, k in K
     for (i,j) in AE
-        if value(a[(i,j),t,d,k]) > thr
+        if value(x[(i,j),t,d,k]) > thr
             push!(flight_arcs, Dict("t"=>t,"d"=>d,"k"=>k,"i"=>i,"j"=>j,
-                "kind" => (sing_direc_idx[(i,j)] in Er ? "service" : "deadhead"),
+                "kind" => ((i,j) in Er ? "service" : "deadhead"),
                 "pass" => 1))
         end
     end
     for (i,j) in AEnr
-        if value(b[(i,j),t,d,k]) > thr
+        if value(y[(i,j),t,d,k]) > thr
             push!(flight_arcs, Dict("t"=>t,"d"=>d,"k"=>k,"i"=>i,"j"=>j,
                 "kind" => "deadhead", "pass" => 2))
         end

@@ -106,7 +106,7 @@ def plot_instance(data, out_path=None):
  
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python plot_instance.py instancia.json [saida.png]")
+        print("Uso: python grafico.py instancia.json [saida.png]")
         sys.exit(1)
  
     json_path = sys.argv[1]
