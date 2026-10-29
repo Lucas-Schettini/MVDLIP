@@ -2,7 +2,7 @@ using JuMP, CPLEX
 using JSON3
 using Combinatorics
 
-data = JSON3.read("dummy_K2.json")
+data = JSON3.read("teste_sem_splitting.json")
 
 D = Int.(data.sets.D)
 V = Int.(data.sets.V)
@@ -38,13 +38,13 @@ AEr  = vcat(Er, [(j,i) for (i,j) in Er]) # Er nos dois sentidos
 
 @variable(model, w[(i,j) in Ap, t in T], Bin)
 @variable(model, z[d in D, t in T], Bin)
-@variable(model, g[(i,j) in Ap, t in T] >= 0, Int)
+@variable(model, g[(i,j) in Ap, t in T] >= 0)
 @variable(model, x[e in AE, t in T, d in D, k in K], Bin)
 @variable(model, y[e in AEnr, t in T, d in D, k in K], Bin)
 #@variable(model, a[(i,j) in AE, t in T, d in D, k in K], Bin)
 #@variable(model, b[(i,j) in AEnr, t in T, d in D, k in K], Bin)
 #@variable(model, p[v in V, t in T, d in D, k in K], Int)
-#@variable(model, u[v in V, t in T, d in D, k in K], Bin) VERIFICAR SE É DE FATO NECESSÁRIO
+@variable(model, u[v in VrD, t in T, d in D, k in K] >= 0) # acho que ele se define sozinho como inteiro
 @variable(model, f[(i,j) in AE, t in T, d in D, k in K] >= 0)
 @variable(model, m >= 0)
 
@@ -117,13 +117,24 @@ delta_minus_nr = Dict(v => [(i,j) for (i,j) in AEnr if j == v] for v in VrD)
     sum(x[a,t,d,k] for a in delta_plus[v])  + sum(y[a,t,d,k] for a in delta_plus_nr[v]) ==
     sum(x[a,t,d,k] for a in delta_minus[v]) + sum(y[a,t,d,k] for a in delta_minus_nr[v]))
 
-@constraint(model, con11[(v,j) in AE, t in T, d in D, k in K; v != d],
-    sum(f[a,t,d,k] for a in delta_plus[v]) - sum(f[a,t,d,k] for a in delta_minus[v]) >= x[(v,j),t,d,k])
+@constraint(model, con11[v in VrD, t in T, d in D, k in K; v != d],
+    sum(f[a,t,d,k] for a in delta_plus[v]) - sum(f[a,t,d,k] for a in delta_minus[v]) == 
+    #x[(v,j),t,d,k]
+    u[v,t,d,k]
+    )
+
+@constraint(model, testcon[v in VrD, t in T, d in D, k in K; v != d],
+    sum(x[a,t,d,k] for a in delta_plus[v]) + sum(y[a,t,d,k] for a in delta_plus_nr[v]) 
+    + sum(x[a,t,d,k] for a in delta_minus[v]) + sum(y[a,t,d,k] for a in delta_minus_nr[v]) 
+    == u[v,t,d,k])
+
+delta_size = Dict(v => length(delta_minus[v]) + length(delta_minus_nr[v]) for v in VrD)
+Mpn = Dict(d => sum(delta_size[v] for v in VrD if v != d) for d in D) #nós possíveis de alcançar
 
 @constraint(model, con12x[(i,j) in AEr, t in T, d in D, k in K],
-    f[(i,j),t,d,k] <= (length(VrD) - 1) * x[(i,j),t,d,k])
+    f[(i,j),t,d,k] <= (Mpn[d] - 1) * x[(i,j),t,d,k])
 @constraint(model, con12y[(i,j) in AEnr, t in T, d in D, k in K],
-    f[(i,j),t,d,k] <= (length(VrD) - 1) * (x[(i,j),t,d,k] + y[(i,j),t,d,k]))
+    f[(i,j),t,d,k] <= (Mpn[d] - 1) * (x[(i,j),t,d,k] + y[(i,j),t,d,k]))
 
 @constraint(model, con13[(i,j) in AEr], 
     sum((x[(i,j),t,d,k] + x[(j,i),t,d,k]) for t in T for d in D for k in K) >= 1)
@@ -137,19 +148,19 @@ delta_minus_nr = Dict(v => [(i,j) for (i,j) in AEnr if j == v] for v in VrD)
 @constraint(model, con16[(i,j) in AEnr, d in D, k in K, t in T], 
     x[(i,j),t,d,k] + x[(j,i),t,d,k] >= y[(i,j),t,d,k] + y[(j,i),t,d,k])
 
-L = 4
+# L = 4
 
-@constraint(model, con17[d in D, k in K, t in T],
-    sum(ts[e]*x[e,t,d,k] for e in AEr) + 
-    sum(tvoo[e]*(x[e,t,d,k] + y[e,t,d,k]) for e in AEnr) <= 
-    L*z[d,t])
+# @constraint(model, con17[d in D, k in K, t in T],
+#     sum(ts[e]*x[e,t,d,k] for e in AEr) + 
+#     sum(tvoo[e]*(x[e,t,d,k] + y[e,t,d,k]) for e in AEnr) <= 
+#     L*z[d,t])
 
 @constraint(model, con18[e in AE, d in D, k in K, t in T],
     x[e,t,d,k] <= z[d,t])
 
-@constraint(model, con19[t in T, d in D, k in K; k < K[end]],
-    sum(x[a,t,d,k]   for a in AE) >=
-    sum(x[a,t,d,k+1] for a in AE))
+# @constraint(model, con19[t in T, d in D, k in K; k < K[end]],
+#     sum(x[a,t,d,k]   for a in AE) >=
+#     sum(x[a,t,d,k+1] for a in AE))
 
 #write_to_file(model, "modelo.lp")
 
@@ -194,3 +205,50 @@ open("solucao.json", "w") do io
                          "truck_arcs" => truck_arcs,
                          "flight_arcs" => flight_arcs))
 end
+
+# w[(0, 11),1] = 1.0
+# w[(11, 0),1] = 1.0
+# w[(0, 12),2] = 1.0
+# w[(12, 0),2] = 1.0
+# z[11,1] = 1.0
+# z[12,2] = 1.0
+# g[(0, 11),1] = 1.0
+# g[(0, 12),2] = 1.0
+# x[(2, 3),1,11,2] = 1.0
+# x[(3, 6),1,11,2] = 1.0
+# x[(5, 11),1,11,2] = 1.0
+# x[(6, 2),1,11,2] = 1.0
+# x[(6, 5),1,11,2] = 1.0
+# x[(9, 8),1,11,2] = 1.0
+# x[(11, 9),1,11,2] = 1.0
+# x[(8, 6),1,11,2] = 1.0
+# x[(4, 7),2,12,2] = 1.0
+# x[(1, 4),2,12,2] = 1.0
+# x[(7, 12),2,12,2] = 1.0
+# x[(5, 1),2,12,2] = 1.0
+# x[(7, 5),2,12,2] = 1.0
+# x[(10, 7),2,12,2] = 1.0
+# x[(12, 10),2,12,2] = 1.0
+# u[2,1,11,2] = 2.0
+# u[3,1,11,2] = 2.0
+# u[5,1,11,2] = 2.0
+# u[6,1,11,2] = 4.0
+# u[8,1,11,2] = 2.0
+# u[9,1,11,2] = 2.0
+# u[1,2,12,2] = 2.0
+# u[4,2,12,2] = 2.0
+# u[5,2,12,2] = 2.0
+# u[7,2,12,2] = 4.0
+# u[10,2,12,2] = 2.0
+# f[(2, 3),1,11,2] = 2.0
+# f[(3, 6),1,11,2] = 4.0
+# f[(5, 11),1,11,2] = 14.0
+# f[(6, 5),1,11,2] = 12.0
+# f[(9, 8),1,11,2] = 2.0
+# f[(8, 6),1,11,2] = 4.0
+# f[(4, 7),2,12,2] = 6.0
+# f[(1, 4),2,12,2] = 4.0
+# f[(7, 12),2,12,2] = 12.0
+# f[(5, 1),2,12,2] = 2.0
+# f[(10, 7),2,12,2] = 2.0
+# m = 270.15005271091553
